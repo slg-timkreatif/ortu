@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="id" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#f8fafc" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#0f172a" media="(prefers-color-scheme: dark)">
+    <title>SAPA Orang Tua - Pantau Anak</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: { extend: { colors: { darkbg: '#0f172a', darkcard: '#1e293b' }, fontFamily: { sans: ['Plus Jakarta Sans', 'sans-serif'] } } }
+        }
+    </script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        body { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+        ::-webkit-scrollbar { width: 0px; }
+        .glass-panel { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.5); }
+        .dark .glass-panel { background: rgba(30, 41, 59, 0.7); border: 1px solid rgba(255, 255, 255, 0.05); }
+        
+        .blob { position: fixed; filter: blur(90px); z-index: -1; opacity: 0.5; pointer-events: none; }
+        .blob-1 { top: -10%; left: -10%; width: 300px; height: 300px; background: #bfdbfe; }
+        .blob-2 { bottom: -10%; right: -10%; width: 250px; height: 250px; background: #e0e7ff; }
+        .dark .blob-1 { background: #1e3a8a; opacity: 0.3; }
+        .dark .blob-2 { background: #312e81; opacity: 0.3; }
+
+        /* Transisi Pindah Layar */
+        .view-section { transition: opacity 0.4s ease, transform 0.4s ease; }
+        .hidden-view { opacity: 0; transform: translateY(20px); pointer-events: none; position: absolute; width: 100%; }
+        .active-view { opacity: 1; transform: translateY(0); position: relative; z-index: 10; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 dark:bg-darkbg dark:text-slate-200 min-h-screen flex flex-col relative transition-colors duration-500 overflow-x-hidden">
+
+    <div class="blob blob-1 animate-pulse"></div>
+    <div class="blob blob-2 animate-pulse" style="animation-delay: 2s;"></div>
+
+    <div id="view-login" class="view-section active-view flex-1 flex flex-col items-center justify-center px-6 min-h-screen">
+        <div class="w-full max-w-sm glass-panel p-8 rounded-[2.5rem] shadow-2xl shadow-blue-900/5 relative overflow-hidden">
+            <div class="absolute -top-10 -right-10 w-32 h-32 bg-blue-500 rounded-full blur-2xl opacity-20"></div>
+            
+            <div class="text-center mb-8 relative z-10">
+                <div class="w-16 h-16 bg-blue-600 text-white rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-blue-500/30">
+                    <i data-lucide="shield-check" class="w-8 h-8"></i>
+                </div>
+                <h1 class="text-2xl font-black tracking-tight text-slate-800 dark:text-white">Portal Wali Murid</h1>
+                <p class="text-xs font-bold text-slate-400 mt-1 uppercase tracking-widest">Sistem SAPA Selogiri</p>
+            </div>
+
+            <form id="form-login" class="space-y-4 relative z-10" onsubmit="event.preventDefault(); handleLogin();">
+                <div>
+                    <label class="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1.5 ml-1">ID Siswa (Cth: SD03-012345)</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                            <i data-lucide="qr-code" class="w-5 h-5 text-slate-400"></i>
+                        </div>
+                        <input type="text" id="input-id" required placeholder="Ketik ID dari kartu anak..." class="w-full pl-11 pr-4 py-3.5 bg-slate-100/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-bold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all uppercase">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1.5 ml-1">PIN Rahasia</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                            <i data-lucide="key-round" class="w-5 h-5 text-slate-400"></i>
+                        </div>
+                        <input type="password" id="input-pin" required placeholder="Masukkan 6 digit PIN..." pattern="[0-9]*" inputmode="numeric" class="w-full pl-11 pr-4 py-3.5 bg-slate-100/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-bold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
+                    </div>
+                </div>
+
+                <button type="submit" id="btn-login" class="w-full mt-6 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm py-4 rounded-2xl shadow-lg shadow-blue-500/30 flex items-center justify-center gap-2 transition-transform active:scale-95">
+                    <span>Akses Dasbor Anak</span>
+                    <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                </button>
+            </form>
+            
+            <p class="text-center text-[10px] font-semibold text-slate-400 mt-6">Hubungi wali kelas jika Anda melupakan PIN atau ID Siswa.</p>
+        </div>
+    </div>
+
+    <div id="view-dashboard" class="view-section hidden-view flex-1 flex flex-col w-full max-w-md mx-auto relative h-screen overflow-y-auto pb-24">
+        
+        <header class="px-6 pt-8 pb-6 shrink-0 relative z-10">
+            <div class="flex items-start justify-between">
+                <div>
+                    <span class="bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 text-[9px] font-extrabold px-2.5 py-1 rounded-lg uppercase tracking-widest mb-2 inline-block" id="dash-sekolah">Memuat...</span>
+                    <h2 class="text-2xl font-black text-slate-800 dark:text-white leading-tight" id="dash-nama">Nama Siswa</h2>
+                    <p class="text-xs font-bold text-slate-500 mt-1" id="dash-kelas">Kelas -- | NISN: --</p>
+                </div>
+                <button onclick="logout()" class="p-2 bg-red-50 dark:bg-red-900/20 text-red-500 rounded-xl hover:bg-red-100 transition-colors" title="Keluar">
+                    <i data-lucide="log-out" class="w-5 h-5"></i>
+                </button>
+            </div>
+        </header>
+
+        <div class="px-5 shrink-0 z-10">
+            <div class="glass-panel p-1 rounded-[2rem] shadow-xl shadow-slate-900/5 bg-gradient-to-br from-white/80 to-slate-50/50 dark:from-slate-800/80 dark:to-slate-900/50 border border-white/60 dark:border-slate-700/50 relative overflow-hidden">
+                <div class="p-5 relative z-10">
+                    <div class="flex items-center justify-between mb-5">
+                        <h3 class="text-xs font-extrabold text-slate-400 uppercase tracking-widest">Status Hari Ini</h3>
+                        <span id="dash-tanggal" class="text-[10px] font-bold bg-slate-200/50 dark:bg-slate-700 text-slate-500 dark:text-slate-300 px-2.5 py-1 rounded-md">Senin, 1 Jan</span>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800/30 p-4 rounded-2xl flex flex-col items-center justify-center text-center">
+                            <div class="p-2 bg-emerald-100 dark:bg-emerald-800/50 text-emerald-600 dark:text-emerald-400 rounded-full mb-2">
+                                <i data-lucide="log-in" class="w-4 h-4"></i>
+                            </div>
+                            <span class="text-[10px] font-bold text-emerald-600/70 dark:text-emerald-400/70 uppercase tracking-wider mb-0.5">Tiba di Sekolah</span>
+                            <span class="text-2xl font-black text-emerald-600 dark:text-emerald-400 font-mono" id="waktu-masuk">--:--</span>
+                        </div>
+
+                        <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800/30 p-4 rounded-2xl flex flex-col items-center justify-center text-center relative overflow-hidden">
+                            <div class="p-2 bg-amber-100 dark:bg-amber-800/50 text-amber-600 dark:text-amber-400 rounded-full mb-2">
+                                <i data-lucide="home" class="w-4 h-4"></i>
+                            </div>
+                            <span class="text-[10px] font-bold text-amber-600/70 dark:text-amber-400/70 uppercase tracking-wider mb-0.5">Pulang ke Rumah</span>
+                            <span class="text-2xl font-black text-amber-600 dark:text-amber-400 font-mono" id="waktu-pulang">--:--</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="px-5 mt-6 shrink-0 z-10 grid grid-cols-2 gap-3">
+            <button onclick="openPermitModal('Sakit')" class="glass-panel py-4 px-2 rounded-2xl flex flex-col items-center justify-center gap-2 hover:bg-white/90 active:scale-95 transition-all shadow-sm">
+                <i data-lucide="thermometer" class="w-6 h-6 text-red-500"></i>
+                <span class="text-xs font-extrabold text-slate-600 dark:text-slate-300">Lapor Sakit</span>
+            </button>
+            <button onclick="openPermitModal('Izin')" class="glass-panel py-4 px-2 rounded-2xl flex flex-col items-center justify-center gap-2 hover:bg-white/90 active:scale-95 transition-all shadow-sm">
+                <i data-lucide="mail-warning" class="w-6 h-6 text-amber-500"></i>
+                <span class="text-xs font-extrabold text-slate-600 dark:text-slate-300">Lapor Izin</span>
+            </button>
+        </div>
+
+        <div class="px-5 mt-6 z-10 flex justify-center">
+             <button onclick="fetchStatusAnak()" id="btn-refresh" class="flex items-center gap-2 text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-4 py-2 rounded-full hover:bg-blue-100 transition-colors">
+                 <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Perbarui Data
+             </button>
+        </div>
+    </div>
+
+    <div id="permit-modal" class="fixed inset-0 z-50 flex items-end justify-center hidden">
+        <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity duration-300 opacity-0 modal-overlay" onclick="closePermitModal()"></div>
+        <div id="permit-content" class="bg-white dark:bg-slate-800 w-full max-w-md rounded-t-[2.5rem] p-6 pb-8 relative z-10 shadow-2xl transform translate-y-full transition-transform duration-300">
+            <div class="w-12 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full mx-auto -mt-2 mb-6"></div>
+            
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 rounded-xl flex items-center justify-center">
+                    <i data-lucide="send" class="w-5 h-5"></i>
+                </div>
+                <div>
+                    <h3 class="text-lg font-black text-slate-800 dark:text-white leading-tight">Kirim Surat Keterangan</h3>
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest" id="permit-subtitle">Izin Tidak Masuk</p>
+                </div>
+            </div>
+
+            <form id="form-permit" onsubmit="event.preventDefault(); submitPermit();">
+                <input type="hidden" id="input-jenis-izin" value="">
+                
+                <div class="mb-4">
+                    <label class="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1.5 ml-1">Keterangan / Alasan</label>
+                    <textarea id="input-alasan" required rows="3" placeholder="Tuliskan keterangan lengkap di sini..." class="w-full p-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-medium text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none transition-colors"></textarea>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3.5 mt-6">
+                    <button type="button" onclick="closePermitModal()" class="py-4 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-bold text-sm active:scale-95 transition">Batal</button>
+                    <button type="submit" id="btn-submit-permit" class="py-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-lg shadow-blue-500/20 flex justify-center items-center gap-2 active:scale-95 transition">
+                        <span>Kirim ke Sekolah</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        // KONFIGURASI ROUTER (Sama dengan sapa.html)
+        const CONFIG = {
+            scriptURL: "https://script.google.com/macros/s/AKfycby1OjnfEnQNu2nSgIfSZRHGNgAJpb_qmL9ChwSzjlW3Bf8dS2jhPDpo-0R6AcuqXv7uWA/exec"
+        };
+
+        // Inisialisasi Aplikasi (Cek apakah Ortu sudah pernah login)
+        document.addEventListener("DOMContentLoaded", () => {
+            initTheme();
+            const savedSession = localStorage.getItem('ortu_session');
+            if (savedSession) {
+                // Langsung masuk dasbor jika sudah ada sesi
+                switchView('view-dashboard');
+                populateDashboard(JSON.parse(savedSession));
+                fetchStatusAnak();
+            }
+        });
+
+        function initTheme() {
+            const hour = new Date().getHours();
+            if (hour >= 18 || hour < 6) document.documentElement.classList.add('dark');
+        }
+
+        // =========================================================================
+        // LOGIKA LAYAR (NAVIGATION)
+        // =========================================================================
+        function switchView(viewId) {
+            document.querySelectorAll('.view-section').forEach(el => {
+                el.classList.remove('active-view');
+                el.classList.add('hidden-view');
+            });
+            const target = document.getElementById(viewId);
+            target.classList.remove('hidden-view');
+            target.classList.add('active-view');
+        }
+
+        // =========================================================================
+        // LOGIKA AUTENTIKASI (LOGIN & LOGOUT)
+        // =========================================================================
+        function handleLogin() {
+            const idSiswa = document.getElementById('input-id').value.trim().toUpperCase();
+            const pinSiswa = document.getElementById('input-pin').value.trim();
+            const btn = document.getElementById('btn-login');
+            
+            if(!idSiswa.includes('-')) {
+                alert("Format ID salah. Harus mengandung tanda strip, contoh: SD03-012345");
+                return;
+            }
+
+            btn.innerHTML = '<i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i> Memeriksa...';
+            lucide.createIcons();
+            btn.disabled = true;
+
+            // Memanggil endpoint backend khusus orang tua
+            fetch(CONFIG.scriptURL, {
+                method: 'POST',
+                body: JSON.stringify({ 
+                    action: "parent_login", 
+                    nisn: idSiswa, 
+                    pin: pinSiswa 
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === "success") {
+                    // Simpan sesi di HP Orang Tua
+                    const sessionData = { nisn: idSiswa, nama: data.nama, kelas: data.kelas, sekolah: data.sekolah };
+                    localStorage.setItem('ortu_session', JSON.stringify(sessionData));
+                    
+                    document.getElementById('input-pin').value = '';
+                    populateDashboard(sessionData);
+                    switchView('view-dashboard');
+                    fetchStatusAnak();
+                } else {
+                    alert("Akses Ditolak: " + data.message);
+                }
+            })
+            .catch(err => {
+                alert("Gangguan koneksi internet. Coba lagi.");
+            })
+            .finally(() => {
+                btn.innerHTML = '<span>Akses Dasbor Anak</span><i data-lucide="arrow-right" class="w-4 h-4"></i>';
+                lucide.createIcons();
+                btn.disabled = false;
+            });
+        }
+
+        function logout() {
+            if(confirm("Apakah Anda yakin ingin keluar dari dasbor pemantauan?")) {
+                localStorage.removeItem('ortu_session');
+                // Reset nilai
+                document.getElementById('waktu-masuk').innerText = "--:--";
+                document.getElementById('waktu-pulang').innerText = "--:--";
+                switchView('view-login');
+            }
+        }
+
+        // =========================================================================
+        // LOGIKA DASBOR PEMANTAUAN (TARIK DATA LIVE)
+        // =========================================================================
+        function populateDashboard(data) {
+            document.getElementById('dash-sekolah').innerText = data.sekolah;
+            document.getElementById('dash-nama').innerText = data.nama;
+            document.getElementById('dash-kelas').innerText = `Kelas ${data.kelas} | ID: ${data.nisn.split('-')[1]}`;
+            
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            document.getElementById('dash-tanggal').innerText = new Date().toLocaleDateString('id-ID', options);
+        }
+
+        function fetchStatusAnak() {
+            const sessionData = JSON.parse(localStorage.getItem('ortu_session'));
+            if(!sessionData) return;
+
+            const iconBtn = document.querySelector('#btn-refresh i');
+            iconBtn.classList.add('animate-spin');
+
+            fetch(CONFIG.scriptURL, {
+                method: 'POST',
+                body: JSON.stringify({ 
+                    action: "parent_status", 
+                    nisn: sessionData.nisn 
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.status === "success") {
+                    // Mewarnai teks berdasarkan data (Jika masuk, warna jadi jelas. Jika belum, tetap abu-abu)
+                    const elMasuk = document.getElementById('waktu-masuk');
+                    const elPulang = document.getElementById('waktu-pulang');
+                    
+                    elMasuk.innerText = data.jam_masuk || "--:--";
+                    elMasuk.classList.toggle('text-slate-300', !data.jam_masuk);
+                    elMasuk.classList.toggle('dark:text-slate-600', !data.jam_masuk);
+
+                    elPulang.innerText = data.jam_pulang || "--:--";
+                    elPulang.classList.toggle('text-slate-300', !data.jam_pulang);
+                    elPulang.classList.toggle('dark:text-slate-600', !data.jam_pulang);
+                }
+            })
+            .catch(err => console.log("Gagal memuat status live"))
+            .finally(() => {
+                setTimeout(() => iconBtn.classList.remove('animate-spin'), 500);
+            });
+        }
+
+        // =========================================================================
+        // LOGIKA FORMULIR IZIN/SAKIT (BOTTOM SHEET)
+        // =========================================================================
+        function openPermitModal(jenis) {
+            document.getElementById('input-jenis-izin').value = jenis;
+            document.getElementById('permit-subtitle').innerText = "Pengajuan " + jenis;
+            document.getElementById('input-alasan').value = ""; // Reset isian
+            
+            const modal = document.getElementById('permit-modal');
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.querySelector('.modal-overlay').classList.remove('opacity-0');
+                document.getElementById('permit-content').classList.remove('translate-y-full');
+            }, 20);
+        }
+
+        function closePermitModal() {
+            const modal = document.getElementById('permit-modal');
+            modal.querySelector('.modal-overlay').classList.add('opacity-0');
+            document.getElementById('permit-content').classList.add('translate-y-full');
+            setTimeout(() => modal.classList.add('hidden'), 300);
+        }
+
+        function submitPermit() {
+            const sessionData = JSON.parse(localStorage.getItem('ortu_session'));
+            const jenisIzin = document.getElementById('input-jenis-izin').value;
+            const alasan = document.getElementById('input-alasan').value.trim();
+            const btn = document.getElementById('btn-submit-permit');
+
+            btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Mengirim...';
+            lucide.createIcons();
+            btn.disabled = true;
+
+            fetch(CONFIG.scriptURL, {
+                method: 'POST',
+                body: JSON.stringify({ 
+                    action: "parent_permit", 
+                    nisn: sessionData.nisn, 
+                    jenis: jenisIzin,
+                    keterangan: alasan,
+                    petugas: "Orang Tua/Wali"
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === "success") {
+                    alert(`Surat ${jenisIzin} berhasil dikirim ke pihak sekolah.`);
+                    closePermitModal();
+                    fetchStatusAnak(); // Refresh agar kartu status mungkin berubah jadi Izin/Sakit
+                } else {
+                    alert("Gagal mengirim: " + data.message);
+                }
+            })
+            .catch(err => {
+                alert("Gangguan koneksi internet. Gagal mengirim surat.");
+            })
+            .finally(() => {
+                btn.innerHTML = '<span>Kirim ke Sekolah</span>';
+                btn.disabled = false;
+            });
+        }
+    </script>
+</body>
+</html>
