@@ -25,6 +25,8 @@
     </script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <style>
         body { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
@@ -41,6 +43,11 @@
         .view-section { transition: opacity 0.4s ease, transform 0.4s ease; }
         .hidden-view { opacity: 0; transform: translateY(20px); pointer-events: none; position: absolute; width: 100%; }
         .active-view { opacity: 1; transform: translateY(0); position: relative; z-index: 10; }
+        
+        /* Modifikasi SweetAlert agar menyatu dengan UI Aplikasi */
+        .swal2-popup { border-radius: 1.5rem !important; font-family: 'Plus Jakarta Sans', sans-serif !important; }
+        .swal2-confirm { border-radius: 0.75rem !important; }
+        .swal2-cancel { border-radius: 0.75rem !important; }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800 dark:bg-darkbg dark:text-slate-200 min-h-screen flex flex-col relative transition-colors duration-500 overflow-x-hidden">
@@ -189,7 +196,7 @@
     <script>
         lucide.createIcons();
 
-        // KONFIGURASI ROUTER (URL Master Kecamatan SAPA Anda)
+        // KONFIGURASI ROUTER KECAMATAN
         const CONFIG = {
             scriptURL: "https://script.google.com/macros/s/AKfycby1OjnfEnQNu2nSgIfSZRHGNgAJpb_qmL9ChwSzjlW3Bf8dS2jhPDpo-0R6AcuqXv7uWA/exec"
         };
@@ -203,7 +210,6 @@
             });
         }
 
-        // Cek Sesi Tersimpan saat pertama dibuka
         document.addEventListener("DOMContentLoaded", () => {
             initTheme();
             const savedSession = localStorage.getItem('ortu_session');
@@ -230,15 +236,19 @@
         }
 
         // =========================================================================
-        // LOGIKA AUTENTIKASI ORANG TUA
+        // LOGIKA AUTENTIKASI ORANG TUA (Menggunakan async/await agar anti-bug)
         // =========================================================================
-        function handleLogin() {
+        async function handleLogin() {
             const idSiswa = document.getElementById('input-id').value.trim().toUpperCase();
             const pinSiswa = document.getElementById('input-pin').value.trim();
             const btn = document.getElementById('btn-login');
             
             if(!idSiswa.includes('-')) {
-                alert("Format ID salah. Harus mengandung tanda strip, contoh: SD03-012345");
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Format ID Salah',
+                    text: 'ID harus mengandung tanda strip, contoh: SD03-012345'
+                });
                 return;
             }
 
@@ -246,39 +256,68 @@
             lucide.createIcons();
             btn.disabled = true;
 
-            fetch(CONFIG.scriptURL, {
-                method: 'POST',
-                body: JSON.stringify({ action: "parent_login", nisn: idSiswa, pin: pinSiswa })
-            })
-            .then(res => res.json())
-            .then(data => {
+            try {
+                const response = await fetch(CONFIG.scriptURL, {
+                    method: 'POST',
+                    body: JSON.stringify({ action: "parent_login", nisn: idSiswa, pin: pinSiswa })
+                });
+                
+                const data = await response.json();
+
                 if (data.status === "success") {
                     const sessionData = { nisn: idSiswa, nama: data.nama, kelas: data.kelas, sekolah: data.sekolah };
                     localStorage.setItem('ortu_session', JSON.stringify(sessionData));
-                    
                     document.getElementById('input-pin').value = '';
-                    populateDashboard(sessionData);
-                    switchView('view-dashboard');
-                    fetchStatusAnak();
+                    
+                    // Notifikasi sukses elegan
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Akses Diberikan',
+                        text: `Selamat datang, wali dari ${data.nama}`,
+                        timer: 2000,
+                        showConfirmButton: false
+                    }).then(() => {
+                        // Setelah alert hilang, baru pindah layar (mencegah catch palsu)
+                        populateDashboard(sessionData);
+                        switchView('view-dashboard');
+                        fetchStatusAnak();
+                    });
+
                 } else {
-                    alert("Akses Ditolak: " + data.message);
+                    Swal.fire({ icon: 'error', title: 'Akses Ditolak', text: data.message });
                 }
-            })
-            .catch(err => alert("Gangguan koneksi internet. Coba lagi."))
-            .finally(() => {
+            } catch (err) {
+                console.error("Kesalahan jaringan:", err);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Gangguan Koneksi',
+                    text: 'Periksa jaringan internet Anda lalu coba lagi.'
+                });
+            } finally {
                 btn.innerHTML = '<span>Akses Dasbor Anak</span><i data-lucide="arrow-right" class="w-4 h-4"></i>';
                 lucide.createIcons();
                 btn.disabled = false;
-            });
+            }
         }
 
         function logout() {
-            if(confirm("Apakah Anda yakin ingin keluar dari dasbor pemantauan?")) {
-                localStorage.removeItem('ortu_session');
-                document.getElementById('waktu-masuk').innerText = "--:--";
-                document.getElementById('waktu-pulang').innerText = "--:--";
-                switchView('view-login');
-            }
+            Swal.fire({
+                title: 'Keluar dari Dasbor?',
+                text: "Anda memerlukan PIN rahasia jika ingin masuk kembali nanti.",
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#3b82f6',
+                cancelButtonColor: '#ef4444',
+                confirmButtonText: 'Ya, Keluar',
+                cancelButtonText: 'Batal'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    localStorage.removeItem('ortu_session');
+                    document.getElementById('waktu-masuk').innerText = "--:--";
+                    document.getElementById('waktu-pulang').innerText = "--:--";
+                    switchView('view-login');
+                }
+            });
         }
 
         // =========================================================================
@@ -343,7 +382,7 @@
             setTimeout(() => modal.classList.add('hidden'), 300);
         }
 
-        function submitPermit() {
+        async function submitPermit() {
             const sessionData = JSON.parse(localStorage.getItem('ortu_session'));
             const jenisIzin = document.getElementById('input-jenis-izin').value;
             const alasan = document.getElementById('input-alasan').value.trim();
@@ -353,31 +392,42 @@
             lucide.createIcons();
             btn.disabled = true;
 
-            fetch(CONFIG.scriptURL, {
-                method: 'POST',
-                body: JSON.stringify({ 
-                    action: "parent_permit", 
-                    nisn: sessionData.nisn, 
-                    jenis: jenisIzin,
-                    keterangan: alasan,
-                    petugas: "Orang Tua/Wali"
-                })
-            })
-            .then(res => res.json())
-            .then(data => {
+            try {
+                const response = await fetch(CONFIG.scriptURL, {
+                    method: 'POST',
+                    body: JSON.stringify({ 
+                        action: "parent_permit", 
+                        nisn: sessionData.nisn, 
+                        jenis: jenisIzin,
+                        keterangan: alasan,
+                        petugas: "Orang Tua/Wali"
+                    })
+                });
+                
+                const data = await response.json();
+
                 if (data.status === "success") {
-                    alert(`Surat ${jenisIzin} berhasil dikirim ke pihak sekolah.`);
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Surat Terkirim!',
+                        text: `Keterangan ${jenisIzin} telah masuk ke sistem sekolah.`,
+                        confirmButtonColor: '#3b82f6'
+                    });
                     closePermitModal();
                     fetchStatusAnak(); 
                 } else {
-                    alert("Gagal mengirim: " + data.message);
+                    Swal.fire({ icon: 'error', title: 'Gagal Memproses', text: data.message });
                 }
-            })
-            .catch(err => alert("Gangguan koneksi internet. Gagal mengirim surat."))
-            .finally(() => {
+            } catch (err) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Masalah Jaringan',
+                    text: 'Gagal mengirim surat. Coba beberapa saat lagi.'
+                });
+            } finally {
                 btn.innerHTML = '<span>Kirim ke Sekolah</span>';
                 btn.disabled = false;
-            });
+            }
         }
     </script>
 </body>
